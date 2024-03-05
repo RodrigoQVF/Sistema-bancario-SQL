@@ -10,7 +10,7 @@ Sistema bancário simples acoplado com mysql
 """
 
 
-import mysql.connector
+
 import mysql.connector
 import customtkinter
 import re
