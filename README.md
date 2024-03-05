@@ -64,3 +64,4 @@ PARA ENTRADAS COM PONTO FLUTUANTE SÓ É PERMITIDO UTILIZANDO "."<br/>
 -Aceitar ',' para utilizar como ponto flutuante<br/>
 -Interface recursiva<br/>
 -Otimização do código explorando melhor conceitos de Clean Code e SOLID.<br/>
+-Melhorar as condições para restringir alguns tipos específicos de nomes de usuários na função de registro.
