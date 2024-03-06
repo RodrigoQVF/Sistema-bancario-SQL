@@ -1,7 +1,7 @@
 ====PROPRIETÁRIO: Rodrigo Queiroz Vieira Freire=====<br/>
 Sistema Bancário Simples em Python com CRUD em MySQL<br/>
 
-Este sistema bancário é desenvolvido em Python, utilizando um banco de dados MySQL para armazenamento das informações dos clientes.<br/>
+Este sistema bancário é desenvolvido em Python, utilizando um banco de dados MySQL para armazenamento das informações dos usuários.<br/>
 O sistema abrange as funcionalidades principais de um banco, incluindo registro de contas, login, saque, depósito, transferência e excluir contas.<br/>
 
 ===INSTRUÇÕES PARA UTILIZAR NA SUA MÁQUINA===<br/>
@@ -17,7 +17,7 @@ você encontrará essa opção na seção "SERVER",logo após verá a opção "D
 
 REGISTRO DA CONTA<br/>
 Os usuários podem registrar suas contas fornecendo seu nome e senha.<br/>
-Os dados da conta são armazenados em uma tabela MySQL chamada login, que contém campos para o identificador do id, usuario, senha e saldo.<br/>
+Os dados da conta são armazenados em uma tabela MySQL chamada login, que contém campos para o identificador do id, usuário, senha e saldo.<br/>
 
 LOGIN<br/>
 Após o registro, os clientes podem fazer login fornecendo seus nomes.<br/>
