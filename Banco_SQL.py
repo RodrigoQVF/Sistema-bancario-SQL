@@ -1,21 +1,175 @@
 """
-Desenvolvedor: Rodrigo Queiroz Vieira Freire            Versão 2.0
+Desenvolvedor: Rodrigo Queiroz Vieira Freire            Versão 3.0
 Sistema bancário simples acoplado com mysql
 
 =Funções=
--Sistema de sign e login que é armazenado no database
+-Sistema de sign e login que é armazenado no banco de dados
 -Sacar, depositar e transferência (transferência para uma conta existente)
 -deletar conta
 -Interface amigável
 """
-
-
-
 import mysql.connector
 import customtkinter
 import re
 
+# MUDE A HOST OU BANCO DE DADOS AQUI ex: host='nome da host'
+conexao_dados = mysql.connector.connect(
+    host='localhost', database='cadastro', user='root', password='')
 
+# Mostra a versao do mysql
+info = conexao_dados.get_server_info()
+print("Conectado ao Servidor mysql ", info)
+cursor = conexao_dados.cursor()
+
+class Usuario:
+
+    @classmethod
+    def setUsuario(cls, usuario):
+        cls.__usuario = usuario
+
+    @classmethod
+    def setSenha(cls, senha):
+        cls.__senha = senha
+
+    @classmethod
+    def setConfirmaSenha(cls, confirmaSenha):
+        cls.__confirmaSenha = confirmaSenha
+
+    @classmethod
+    def setValor(cls, valor):
+        cls.__valor = valor
+
+    @classmethod
+    def setRecebedor(cls, recebedor):
+        cls.__recebedor = recebedor
+
+    @classmethod
+    def setSaldoFormatado(cls, saldoFormatado):
+        cls.__saldoFormatado = saldoFormatado
+
+    @classmethod
+    def getSaldoFormatado(cls):
+        return cls.__saldoFormatado
+
+    @classmethod
+    def getUsuario(cls):
+        return cls.__usuario
+
+    @classmethod
+    def getSenha(cls):
+        return cls.__senha
+
+    @classmethod
+    def getConfirmaSenha(cls):
+        return cls.__confirmaSenha
+
+    @classmethod
+    def getValor(cls):
+        return cls.__valor
+
+    @classmethod
+    def getRecebedor(cls):
+        return cls.__recebedor
+
+    @classmethod
+    def ValorFormatado(cls):
+        valor_saque_formatado = int(float(cls.getValor()) * 10**2)/10**2
+        return valor_saque_formatado
+
+    @classmethod
+    def registrar(cls):
+        if cls.getUsuario()[0] == " " or len(cls.getUsuario()) <= 3:
+            warning_usuario_invalido()
+        else:
+            add_user = (f"""insert into login
+            (id, usuario, senha)
+            values (default,'{cls.getUsuario()}', '{cls.getSenha()}')""")
+            add_log = (f"""select usuario, senha from login
+                where usuario like binary '{cls.getUsuario()}'""")
+            cursor.execute(add_log)
+            cursor.fetchall()
+
+            if cursor.rowcount == 1:
+                warning_login_exist()
+
+            else:
+                cursor.execute(add_user)
+                warning_login_reg()
+
+    @classmethod
+    def logar(cls):
+        add_log = (f"""select usuario, senha from login
+                where usuario like binary '{cls.getUsuario()}' and senha like binary '{cls.getSenha()}'""")
+        cursor.execute(add_log)
+        cursor.fetchall()  # busca todas as linhas
+
+        if cursor.rowcount == 1:
+            troca_tela()
+        else:
+            warning_logado()
+
+    @classmethod
+    def saque(cls):
+        if cls.getConfirmaSenha() == cls.getSenha():
+            if apenas_num(cls.getValor()):
+                if cls.ValorFormatado() > float(cls.getSaldoFormatado()):
+                    warning_saldo_insuficiente(0.4, 0.7)
+                else:
+                    atualiza_saque = (f"""update login
+                    set saldo = saldo - {cls.ValorFormatado()} where usuario like binary '{cls.getUsuario()}'""")
+                    cursor.execute(atualiza_saque)
+                    mostra_saldo.destroy()
+                    atualiza_saldo()
+                    warning_saque_confirm()
+            else:
+                warning_valor_invalido(0.39, 0.7)
+        else:
+            warning_senha_errada(0.41, 0.7)
+
+    @classmethod
+    def deposito(cls):
+        if cls.getConfirmaSenha() == cls.getSenha():
+            if apenas_num(cls.getValor()):
+                atualiza_deposito = (f"""update login
+                set saldo = saldo + {cls.ValorFormatado()} where usuario like binary '{cls.getUsuario()}'""")
+                cursor.execute(atualiza_deposito)
+                mostra_saldo.destroy()
+                atualiza_saldo()
+                warning_deposito_confirmado()
+            else:
+                warning_valor_invalido(0.6, 0.7)
+        else:
+            warning_senha_errada(0.62, 0.7)
+
+    @classmethod
+    def transferencia(cls):
+        if cls.getConfirmaSenha() == cls.getSenha():
+            if apenas_num(cls.getValor()):
+                if usuario_exist(cls.getRecebedor()):
+                    if cls.ValorFormatado() > float(cls.getSaldoFormatado()):
+                        warning_saldo_insuficiente(0.84, 0.78)
+                    else:
+                        atualiza_saldo_logado = (f"""update login set saldo = saldo + {cls.ValorFormatado()}
+                        where usuario like binary '{cls.getRecebedor()}'""")
+                        atualiza_saldo_recebedor = (f"""update login set saldo = saldo - {cls.ValorFormatado()}
+                        where usuario like binary '{cls.getUsuario()}' """)
+                        cursor.execute(atualiza_saldo_logado)
+                        cursor.execute(atualiza_saldo_recebedor)
+                        mostra_saldo.destroy()
+                        atualiza_saldo()
+                        warning_transfer_confirmada()
+                else:
+                    warning_usuario_N_exist()
+            else:
+                warning_valor_invalido(0.82, 0.78)
+        else:
+            warning_senha_errada(0.84, 0.78)
+
+customtkinter.set_appearance_mode("Dark")
+janela = customtkinter.CTk()
+janela.geometry("1280x720")
+janela.maxsize(width=1280, height=720)
+janela.minsize(width=1280, height=720)
 
 def apenas_num(string):
     padrão_letras = r'^[0-9.]+$'
@@ -31,30 +185,40 @@ def usuario_exist(usuario):
         return True
     else:
         return False
-    
+
 def warning_logado():
-    warning_log = customtkinter.CTkLabel(janela, text="Nome de usuário ou senha incorretos!",anchor=customtkinter.W, text_color="red", font=fonte_warning, bg_color="grey20")
+    warning_log = customtkinter.CTkLabel(janela, text="Nome de usuário ou senha incorretos!",
+    anchor=customtkinter.W, text_color="red", font=fonte_warning, bg_color="grey20")
     warning_log.place(relx=0.12, rely=0.7)
     warning_log.after(3300, lambda: warning_log.destroy())
 
 def warning_login_exist():
-    login_exist = customtkinter.CTkLabel(janela, text="Usuário já registrado!",  anchor=customtkinter.E, text_color="red", font=reg_fonte, bg_color="grey20")
+    login_exist = customtkinter.CTkLabel(janela, text="Usuário já registrado!",
+    anchor=customtkinter.E, text_color="red", font=reg_fonte, bg_color="grey20")
     login_exist.place(relx=0.69, rely=0.7)
     login_exist.after(2500, lambda: login_exist.destroy())
-        
+
 def warning_login_reg():
-    login_exist = customtkinter.CTkLabel(janela, text="Usuário registrado!",  anchor=customtkinter.E, text_color="green", font=reg_fonte, bg_color="grey20")
+    login_exist = customtkinter.CTkLabel(janela, text="Usuário registrado!",
+    anchor=customtkinter.E, text_color="green", font=reg_fonte, bg_color="grey20")
     login_exist.place(relx=0.7, rely=0.7)
     login_exist.after(2500, lambda: login_exist.destroy())
 
 def warning_usuario_invalido():
-    warning = customtkinter.CTkLabel(janela, text="Nome de usuário inválido\n(Tamanho insuficiente ou espaço ou número no começo)", anchor=customtkinter.E, text_color="red", font=fonte_warning, bg_color="grey20")
-    warning.place(relx=0.62, rely=0.7)
-    warning.after(3300, lambda: warning.destroy())
+    warning_user_pass = customtkinter.CTkLabel(janela, text="Nome de usuário ou senha inválida(o)\n(Tamanho insuficiente ou espaço ou número no começo)",
+    anchor=customtkinter.E, text_color="red", font=fonte_warning, bg_color="grey20")
+    warning_user_pass.place(relx=0.62, rely=0.7)
+    warning_user_pass.after(3300, lambda: warning_user_pass.destroy())
+
+def warning_mesmo_user():
+    warning_mesmoUser = customtkinter.CTkLabel(janela, text="Não é possível transferir\n para si mesmo!",
+    anchor=customtkinter.E, text_color="red", font=fonte_warning, bg_color="grey20")
+    warning_mesmoUser.place(relx=0.82, rely=0.77)
+    warning_mesmoUser.after(3300, lambda: warning_mesmoUser.destroy())
 
 def warning_senha_errada(x, y):
     warning_saque = customtkinter.CTkLabel(
-        janela, text="senha incorreta!", anchor=customtkinter.CENTER, text_color="red", font=fonte_warning, bg_color="grey20")
+    janela, text="senha incorreta!", anchor=customtkinter.CENTER, text_color="red", font=fonte_warning, bg_color="grey20")
     warning_saque.place(relx=x, rely=y)
     warning_saque.after(2500, lambda: warning_saque.destroy())
 
@@ -97,41 +261,9 @@ def warning_usuario_N_exist():
     warning_usuario_n_existe.after(
         2500, lambda: warning_usuario_n_existe.destroy())
 
-def transfere_saldo():
-    atualiza_saldo_logado = (f"""update login
-    set saldo = saldo + {valor_transfere_formatado}
-    where usuario like binary '{entry_recebedor.get()}'""")
-
-    atualiza_saldo_recebedor = (f"""update login
-                                set saldo = saldo - {valor_transfere_formatado}
-where usuario like binary '{usuario}' """)
-    cursor.execute(atualiza_saldo_logado)
-    cursor.execute(atualiza_saldo_recebedor)
-    mostra_saldo.destroy()
-    atualiza_saldo()
-
-def adiciona_saque():
-    atualiza_saque = (f"""update login
-    set saldo = saldo - {valor_saque_formatado} where usuario like binary '{usuario}'""")
-    cursor.execute(atualiza_saque)
-    mostra_saldo.destroy()
-    atualiza_saldo()
-
-def atualiza_deposito():
-    global valor_deposito_formatado
-    valor_deposito_formatado = int(float(entry_valor_deposito.get()) * 10**2)/10**2
-    atualiza_deposito = (f"""update login
-    set saldo = saldo + {valor_deposito_formatado} where usuario like binary '{usuario}'""")
-    cursor.execute(atualiza_deposito)
-    mostra_saldo.destroy()
-    atualiza_saldo()
-
 def atualiza_saldo():
     global mostra_saldo
-    global saldo_real
-    global saldo_formatado
-    saldo_banco = (f"""select saldo from login where usuario like binary '{
-                   usuario}' and senha like binary '{senha}' """)
+    saldo_banco = (f"""select saldo from login where usuario like binary '{Usuario().getUsuario()}' and senha like binary '{Usuario().getSenha()}' """)
     cursor.execute(saldo_banco)
     conta = cursor.fetchall()
     for saldo in conta:
@@ -141,19 +273,11 @@ def atualiza_saldo():
     pad = f"[{remove}]"
     saldo_real = re.sub(pad, "", saldo1)
     saldo_formatado = "{:.2f}".format(float(saldo_real))
+    Usuario().setSaldoFormatado(saldo_formatado)
     mostra_saldo = customtkinter.CTkLabel(
         janela, text=f"saldo:{saldo_formatado}R$", anchor=customtkinter.N, font=fonte)
     mostra_saldo.place(relx=0.1, rely=0.1)
     mostra_saldo.after(300)
-
-def chama_janela():
-    global janela
-    customtkinter.set_appearance_mode("Dark")
-    janela = customtkinter.CTk()
-    janela.geometry("1280x720")
-    janela.maxsize(width=1280, height=720)
-    janela.minsize(width=1280, height=720)
-
 
 def troca_tela():
     frame.after(700, lambda: frame.destroy())
@@ -169,7 +293,7 @@ def troca_tela():
     logado()
 
 def logado():
-    global frame_saque
+    global frame_saque 
     global frame_transfer
     global frame_deposito
     global Nome_banco
@@ -208,8 +332,7 @@ def logado():
         janela, text="Deletar conta", width=200, height=50, command=deletar_conta, corner_radius=22, fg_color="grey", border_color="red", border_width=1, hover_color="red")
     button_delete.place(relx=0.17, rely=0.98, anchor=customtkinter.SE)
 
-    button_voltar = customtkinter.CTkButton(janela, text="Voltar tela de login", width=200, height=50, command=voltar_tela,
-                                            corner_radius=22, fg_color="grey", border_color="blue", border_width=1, hover_color="blue")
+    button_voltar = customtkinter.CTkButton(janela, text="Voltar tela de login", width=200, height=50, command=voltar_tela,corner_radius=22, fg_color="grey", border_color="blue", border_width=1, hover_color="blue")
     button_voltar.place(relx=0.34, rely=0.98, anchor=customtkinter.SE)
 
     label_saque = customtkinter.CTkLabel(
@@ -269,22 +392,6 @@ def logado():
     entry_valor_transfer.place(
         relx=0.89, rely=0.3, anchor=customtkinter.CENTER)
 
-def button_logar():
-    global usuario
-    global senha
-    usuario = entry_user.get()
-    senha = entry_pass.get()
-
-    add_log = (f"""select usuario, senha from login
-                where usuario like binary '{usuario}' and senha like binary '{senha}'""")
-    cursor.execute(add_log)
-    cursor.fetchall()  # busca todas as linhas
-
-    if cursor.rowcount == 1:
-        troca_tela()
-    else:
-        warning_logado()
-        
 def voltar_tela():
     Nome_banco.after(0, lambda: Nome_banco.destroy())
     mostra_saldo.after(0, lambda: mostra_saldo.destroy())
@@ -301,7 +408,7 @@ def voltar_tela():
     label_transfer.after(0, lambda: label_transfer.destroy())
     entry_pass_confirm_deposito.after(0, lambda: entry_pass_confirm_deposito.destroy())
     entry_pass_confirm_saque.after(0, lambda: entry_pass_confirm_saque.destroy())
-    entry_pass_confirm_transfer.after( 0, lambda: entry_pass_confirm_transfer.destroy())
+    entry_pass_confirm_transfer.after(0, lambda: entry_pass_confirm_transfer.destroy())
     entry_valor_saque.after(0, lambda: entry_valor_saque.destroy())
     entry_valor_deposito.after(0, lambda: entry_valor_deposito.destroy())
     entry_valor_transfer.after(0, lambda: entry_valor_transfer.destroy())
@@ -309,85 +416,47 @@ def voltar_tela():
     tela_inicial()
 
 def deletar_conta():
-    delete_account = (f"delete from login where usuario like binary '{usuario}'")
+    delete_account = (f"delete from login where usuario like binary '{
+                      Usuario().getUsuario()}'")
     cursor.execute(delete_account)
     voltar_tela()
 
 def saque():
-    global valor_saque_formatado
-    if entry_pass_confirm_saque.get() == senha:
-        if apenas_num(entry_valor_saque.get()) == True:
-            valor_saque_formatado = int(float(entry_valor_saque.get()) * 10**2)/10**2
-            if valor_saque_formatado > float(saldo_real):
-                warning_saldo_insuficiente(0.4, 0.7)
-            else:
-                warning_saque_confirm()
-                adiciona_saque()
-        else:
-            warning_valor_invalido(0.39, 0.7)  
-    else:
-        warning_senha_errada(0.41, 0.7)
+    Usuario().setConfirmaSenha(entry_pass_confirm_saque.get())
+    Usuario().setValor(entry_valor_saque.get())
+    Usuario().saque()
 
 def deposita():
-    if entry_pass_confirm_deposito.get() == senha:
-        if apenas_num(entry_valor_deposito.get()) == True:
-            warning_deposito_confirmado()
-            atualiza_deposito()
-        else:
-            warning_valor_invalido(0.6, 0.7)
-
-    else:
-        warning_senha_errada(0.62, 0.7)
-
+    Usuario().setConfirmaSenha(entry_pass_confirm_deposito.get())
+    Usuario().setValor(entry_valor_deposito.get())
+    Usuario().deposito()
 
 def transfer():
-    global valor_transfere_formatado
-    if entry_pass_confirm_transfer.get() == senha:
-        if apenas_num(entry_valor_transfer.get()) == True:
-            valor_transfere_formatado = int(float(entry_valor_transfer.get()) * 10**2)/10**2
-            if usuario_exist(entry_recebedor.get()) == True:
-                if valor_transfere_formatado > float(saldo_real):
-                    warning_saldo_insuficiente(0.84, 0.78)
-                else:
-                    warning_transfer_confirmada()
-                    transfere_saldo()
-
-            else:
-                warning_usuario_N_exist()
-
-        else:
-            warning_valor_invalido(0.82, 0.78)
-
+    if entry_recebedor.get() == Usuario().getUsuario():
+        warning_mesmo_user()
     else:
-        warning_senha_errada(0.84, 0.78)
+        Usuario().setConfirmaSenha(entry_pass_confirm_transfer.get())
+        Usuario().setValor(entry_valor_transfer.get())
+        Usuario().setRecebedor(entry_recebedor.get())
+        Usuario().transferencia()
 
+def button_logar():
+    if entry_user.get() != "" or entry_pass.get() != "":
+        Usuario().setUsuario(entry_user.get())
+        Usuario().setSenha(entry_pass.get())
+        Usuario().logar()
+    else:
+        warning_logado()
 
 def button_register():
-    usuario = entry_user_reg.get()
-    senha = entry_pass_reg.get()
-    if usuario != "":
-        if usuario[0].isalpha() == False or usuario[0] == " " or len(usuario) <= 3:
-            warning_usuario_invalido()
-        else:
-            add_user = (f"""insert into login
-                (id, usuario, senha)
-                values (default,'{usuario}', '{senha}')""")
-            add_log = (f"""select usuario, senha from login
-                    where usuario like binary '{usuario}'""")
-            cursor.execute(add_log)
-            cursor.fetchall()  # busca todas as linhas
-            if cursor.rowcount == 1:
-                warning_login_exist()
-
-            else:
-                cursor.execute(add_user)
-                warning_login_reg()
+    if entry_user_reg.get() != "" or entry_pass_reg.get() != "":
+        Usuario().setUsuario(entry_user_reg.get())
+        Usuario().setSenha(entry_pass_reg.get())
+        Usuario().registrar()
     else:
         warning_usuario_invalido()
 
-
 def tela_inicial():
-    
     global frame
     global frame_d
     global texto
@@ -444,20 +513,7 @@ def tela_inicial():
         janela, text="Registrar", command=button_register, fg_color="grey", width=250, height=50, corner_radius=10, border_color="black", border_width=1, bg_color="grey20")
     button_registrar.place(relx=0.68, rely=0.8, anchor=customtkinter.W)
 
-
-chama_janela()
 tela_inicial()
-
-#MUDE A HOST OU BANCO DE DADOS AQUI ex: host='nome da host'
-conexao_dados = mysql.connector.connect(
-    host='localhost', database='cadastro', user='root', password='')
-
-
-# Mostra a versao do mysql
-info = conexao_dados.get_server_info()
-print("Conectado ao Servidor mysql ", info)
-cursor = conexao_dados.cursor()
-
 janela.mainloop()
 """
 =====DOCUMENTAÇÃO=====
@@ -481,78 +537,101 @@ def exemplo <-- nome da função 23 <-- número que informa a linha que localiza
     isso é um exemplo para a legenda
 } (Fim chaves exemplo) <-- Informa o fechamento das chaves
 
+CLASSE USUÁRIO
+funções getters e setters como método de classe e atributos privados do tipo String.
+{
+def setUsuario
+def setSenha
+def setConfirmaSenha
+def setValor
+def setRecebedor
+def setSaldoFormatado
+def getSaldoFormatado
+def getUsuario
+def getSenha
+def getConfirmaSenha
+def getValor
+def getRecebedor
+}
 
+{
+def ValorFormatado float
+    Formatada o valor do saldo para a variavel tornar-se do tipo float.
 
-def chama janela 149
-    Inicializa a janela da interface (FUNÇÃO PRINCIPAL)
+def registrar
+    Onde processa toda a lógica para criar uma conta e inseri-la no banco de dados
+
+def logar
+    Processa toda a lógica para logar em uma conta já existente no banco de dados
+
+def saque
+    Processa toda a lógica para fazer a operação de saque do usuário logado
+
+def deposito
+    Processa toda a lógica para fazer a operação de depositar no saldo do usuário logado e atualizando no banco de dados simultaneamente
+
+def transferencia
+    Processa toda a lógica para fazer a operação de transferência de saldo para um usuário existente no banco de dados
+}
 
 
 { (Início chaves tela_inicial)
 
-def tela_inicial 389
+def tela_inicial 461
     Inicializa todas as entrys, labels e frames da tela de registrar e logar
 
-def button_register 365 (Botão registrar) 
-    Onde processa toda a lógica para criar uma conta e inseri-la no banco de dados mysql
+def button_register 453 (Botão registrar)
+    Chama o método Registrar da classe usuário
 
-def button_logar 272 (botao logar)
-    Processa toda a lógica para logar em uma conta já existente no banco de dados mysql
-
-def troca_tela 158
+def button_logar 445 (botao logar)
+    Chama o método Logar da classe usuário
+def troca_tela 284
     Apaga todas as entrys, labels e frames da tela inicial para inciar a nova configuração de tela
 }(fim chaves tela_inicial)
 
 
 { (Início chaves logado)
 
-def logado 171
+def logado 297
     Incializa todas as entrys, labels e frames da tela de usuário logado, onde o usuário consegue sacar, depositar e transferir
 
-def atualiza_saldo 129
+def atualiza_saldo 266
     Faz a atualização instantânea do saldo disponivel do usuário logado (atualiza quando saca, deposita e transfere)
 
-def apenas_num 20
+def apenas_num 176
     Checa se a entry do valor de saque, deposito e transfere tem apenas números
 
     
 { (início chaves saque)
 
-def saque 316 (botão saque)
+def saque 426 (botão saque)
     Processa toda a lógica para fazer a operação de saque do usuário logado
-    def adiciona_saque 113
-          Faz a atualização da ação de sacar no banco de dados mysql
 } (fim chaves saque)
 
 
 { (início chaves deposita)
 
-def deposita 331 (botão de depositar)
-    Processa toda a lógica para fazer a operação de depositar no saldo do usuário logado e atualizando no banco de dados simultaneamente
-    def atualiza_deposito 120
-        Faz a atualização da ação de depositar no banco de dados mysql
+def deposita 431 (botão de depositar)
+    Chama o método deposito da classe usuário
 } (fim chaves deposita)
 
 
 { (início chaves transfer)
 
-def transfer 343 (botão de transferência)
-    Processa toda a lógica para fazer a operação de transferência de saldo para um usuário existente no banco de dados
+def transfer 436 (botão de transferência) 
+    Chama o método transferência da classe usuário
     
-    def usuario_exist 25
+    def usuario_exist 181
         Retorna se existe um usuário para fazer a transferêcia de saldo
-
-        def transfere_saldo 100
-            Faz a atualização da ação de transferência de saldo no banco de dados mysql
 } (fim chaves transfer)
-
 
 { (início chaves voltar_tela)
 
-def voltar_tela 288 (Botão voltar tela)
+def voltar_tela 397 (Botão voltar tela)
     Apaga todas as entrys, labels e frames da tela inicial para inciar a nova configuração de tela (tela inicial de logar e registrar)
 
-def deletar_conta 311 (Botão deletar conta)
-    apaga a conta do usuário do banco de dados MySQL e chama a função voltar_tela
+def deletar_conta 420 (Botão deletar conta)
+    apaga a conta do usuário do banco de dados e chama a função voltar_tela
 }(fim chaves voltar_tela)
 
 
@@ -561,5 +640,5 @@ def deletar_conta 311 (Botão deletar conta)
 !!!TODAS AS FUNÇÕES QUE TEM O NOME "warning_....." SÃO AVISOS PARA GUIAR O USUÁRIO, O NOME DOS WARNINGS SÃO AUTO-EXPLICATIVOS!!!
 
 ==EXPLICAÇÕES DIVERSAS==
-Todas as variáveis globais dentro de funções são para funcionar em outra função, como por exemplo as variáveis globais do tela_inicial são para funcionar na troca_tela.
+Todas as variáveis globais são da interface para que consiga fazer as ação de troca de tela dentro de outras funções!
 """
