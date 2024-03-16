@@ -5,13 +5,13 @@ Este sistema bancário é desenvolvido em Python, utilizando um banco de dados M
 O sistema abrange as funcionalidades principais de um banco, incluindo registro de contas, login, saque, depósito, transferência e excluir contas.<br/>
 
 ===INSTRUÇÕES PARA UTILIZAR NA SUA MÁQUINA===<br/>
--Certifique-se de ter o VSCode (COMPILADOR), o WAMP Server (LOCALHOST) e o MySQL Workbench (DATABASE) instalados.<br/>
+-Certifique-se de ter o WAMP Server (LOCALHOST) e o MySQL Workbench (DATABASE) instalados.<br/>
 -Inicialize o servidor local do WAMP Server e abra o MySQL Workbench e conecte-se ao servidor local.<br/>
 (Use as configurações padrão (host: localhost, porta: 3306, usuário: root, senha: em branco))<br/>
 -Selecione a opção para importar um arquivo SQL (cadastro-login).<br/> 
 você encontrará essa opção na seção "SERVER",logo após verá a opção "Data Import".<br/>
 -No VScode, instale as bibliotecas usadas no código (mysql-connector, re, customtkinter)<br/>
--Após realizada todas as etapas, compile o código "Banco_SQL.py" no compilador (VScode) que começará funcionar normalmente.<br/>
+-Após realizada todas as etapas, execute o arquivo "Banco_SQL.exe" que começará funcionar normalmente.<br/>
 
 ===FUNCIONALIDADES===<br/>
 
